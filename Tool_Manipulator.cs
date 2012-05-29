@@ -133,4 +133,76 @@ function ServerCmdManipulator(%client)
 	}
 }
 
-//Trader suggests I call this... The Manipulator!
+package ManipulatorPackage
+{
+	//TODO: Move to Tool_Manipulator file
+	function ServerCmdPlantBrick(%client)
+	{
+		if (isObject(%client.player) && isObject(%client.player.tempBrick) && %client.player.tempBrick.isVblBase)
+		{
+			%tb = %client.player.tempBrick;
+			%pos = %tb.getPosition();
+			%ad = %tb.getAngleId() - %client.vbl.virBricks[0, 2];
+			if (%ad > 0) %client.vbl.rotateBricksCW(%ad);
+			else %client.vbl.rotateBricksCCW(mAbs(%ad));
+			%dif = VectorSub(%pos, %client.vbl.virBricks[0, 1]);
+			%client.vbl.shiftBricks(%dif);
+			%client.vbl.copyNum += 1;
+			%client.vbl.createBricks();
+			%client.vbl.shiftBricks(VectorScale(%dif, -1));
+			//%client.vbl.clearList();
+			//%client.vblMode = "Copy";
+			//commandToClient(%client, 'centerPrint', "\c2Build placed, you have been set to \c1Copy\c2 mode.", 3);
+			//%tb.isVblBase = false;
+			//%tb.delete();
+		}
+		else
+		{
+			Parent::ServerCmdPlantBrick(%client);
+		}
+	}
+
+	function fxDTSBrick::onRemove(%obj)
+	{
+		if (%obj.isVblBase)
+		{
+			for (%i = 0; %i < clientGroup.getCount(); %i++)
+			{
+				%client = clientGroup.getObject(%i);
+				if (isObject(%client.player) && %client.player.tempBrick == %obj)
+				{
+					%client.vblMode = "Copy";
+					commandToClient(%client, 'centerPrint', "\c2Build placement cancelled, you have been set to \c1Copy\c2 mode.", 3);
+					break;
+				}
+			}
+		}
+		Parent::onRemove(%obj);
+	}
+
+	function fxDTSBrick::setDataBlock(%obj, %datablock)
+	{
+		if (%obj.isVblBase)
+		{
+			for (%i = 0; %i < clientGroup.getCount(); %i++)
+			{
+				%client = clientGroup.getObject(%i);
+				if (isObject(%client.player) && %client.player.tempBrick == %obj)
+				{
+					%client.vblMode = "Copy";
+					%obj.isVblBase = false;
+					commandToClient(%client, 'centerPrint', "\c2Build placement cancelled, you have been set to \c1Copy\c2 mode.", 3);
+					break;
+				}
+			}
+		}
+		Parent::setDataBlock(%obj, %datablock);
+	}
+
+	function ServerCmdLoadAllBricks(%client)
+	{
+		%client.vbl.loadBricks();
+	}
+};
+
+activatePackage(ManipulatorPackage);
